@@ -1,32 +1,22 @@
+using NeithDB.Infrastructure.Health;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-
-var summaries = new[]
+builder.Services.AddSingleton(sp =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    var opts = sp.GetRequiredService<IOptions<QdrantOptions>>().Value;
+    return new QdrantClient(new QdrantClientConfig { Url = opts.Url });
 });
 
-app.Run();
+builder.Services.AddHealthChecks()
+    .AddCheck<QdrantHealthCheck>("qdrant");
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+builder.Services.AddControllers();
+var app = builder.Build();
+
+app.UseRouting();
+app.MapHealthChecks("/health");
+app.MapControllers();
+
+app.Run();

@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+
+  neithdb-api:
+    build:
+      context: ./src/NeithDB.Api
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_URLS=http://+:5000
+      - QDRANT__URL=http://qdrant:6333
+    depends_on:
+      - qdrant
